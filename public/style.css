@@ -49,3 +49,4 @@ button { padding: 12px 20px; border: none; background-color: var(--primary-color
 #groceries-to-generate { max-height: 40vh; overflow-y: auto; background: #f8f9fa; padding: 1em; border-radius: 8px; margin-bottom: 1em; }
 #recipe-details-content ul { list-style-type: none; padding-left: 0; }
 #recipe-details-content pre { white-space: pre-wrap; background: #f8f8f8; padding: 1em; border-radius: 4px; }
+#app-version { font-size: 0.8em; color: #999; text-align: center; margin-top: 1.5em; }
