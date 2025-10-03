@@ -6,11 +6,13 @@ const RECURRING_ITEMS = ["Lait", "Jus d'orange", "Jambon", "Pain", "Fromage en t
 
 // --- INITIALISATION FIREBASE ---
 // Firebase is now initialized by the /__/firebase/init.js script included in index.html
-const auth = firebase.auth();
-const db = firebase.firestore();
+var auth = firebase.auth();
+var db = firebase.firestore();
 
 // --- SÉLECTEURS DOM ---
-const $ = (selector) => document.querySelector(selector);
+function $(selector) {
+    return document.querySelector(selector);
+}
 let currentDate = new Date();
 let allRecipes = [];
 let activeView = 'dashboard';
@@ -297,7 +299,7 @@ async function initApp() {
                     <div class="day-number">${day}</div>
                     <div class="day-content">
                         <div class="day-meals">
-                            <div class="meal-slot" data-meal-type="Déjeuner" id="dejeuner-${dateStr}"></div>
+                            <div class="meal-slot" data-meal-type="Déjeuner" id="déjeuner-${dateStr}"></div>
                             <div class="meal-slot" data-meal-type="Souper" id="souper-${dateStr}"></div>
                         </div>
                         <div class="day-events"></div>
