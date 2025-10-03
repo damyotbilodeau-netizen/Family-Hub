@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Hub - Famille A.-V.</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+    <style>
+        .close-btn {
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-container" class="container">
+        <h1>Le Hub</h1>
+        <p>Application de planification de la famille A.-V.</p>
+        <div class="form-group"><input type="email" id="email" placeholder="Courriel" required></div>
+        <div class="form-group"><input type="password" id="password" placeholder="Mot de passe" required></div>
+        <button id="login-btn">Se connecter / S'inscrire</button>
+        <p id="auth-error"></p>
+    </div>
+
+    <div id="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Le Hub</h2>
+                <div id="user-profile"><span id="user-email-display"></span><button id="logout-btn">Déconnexion</button></div>
+            </div>
+            <nav>
+                <a href="#" class="nav-item active" data-view="dashboard">Tableau de bord</a>
+                <a href="#" class="nav-item" data-view="calendar">Calendrier</a>
+                <a href="#" class="nav-item" data-view="tasks">Tâches</a>
+                <a href="#" class="nav-item" data-view="groceries">Épicerie</a>
+                <a href="#" class="nav-item" data-view="recipes">Livre de recettes</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="import-csv-btn" class="btn-secondary btn-full-width">Importer un menu (CSV)</button>
+                <input type="file" id="csv-file-input" style="display:none;" accept=".csv">
+            </div>
+        </aside>
+
+        <main class="main-content" id="main-content">
+            </main>
+    </div>
+
+    <div id="edit-recipe-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2 id="edit-recipe-title"></h2><form id="edit-recipe-form"></form></div></div>
+    <div id="recipe-select-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>Sélectionner un repas</h2><input type="text" id="recipe-select-search" placeholder="Rechercher..."><div id="recipe-select-list"></div><hr><button id="add-new-recipe-btn" class="btn-secondary">Ajouter une recette</button> <button id="remove-meal-btn" class="btn-danger">Retirer ce repas</button></div></div>
+    <div id="recipe-details-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><div id="recipe-details-content"></div><hr><div id="chef-assignment-container"></div><button id="change-meal-btn" class="btn-secondary">Modifier le repas</button></div></div>
+    <div id="generate-groceries-modal" class="modal"><div class="modal-content"><span class="close-btn">&times;</span><h2>Liste d'épicerie de la semaine</h2><div id="groceries-to-generate"></div><button id="add-groceries-to-list-btn">Ajouter à la liste</button></div></div>
+    <!-- Event Modal -->
+    <div id="event-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="event-modal-title">Ajouter un événement</h3>
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <input type="hidden" id="event-date">
+                <div class="form-group">
+                    <label for="event-title">Titre</label>
+                    <input type="text" id="event-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-category">Catégorie</label>
+                    <select id="event-category"></select>
+                </div>
+                <div class="form-group">
+                    <label>Membres assignés</label>
+                    <div id="event-assignees" class="checkbox-group"></div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="save-event-btn">Sauvegarder</button>
+                    <button type="button" id="delete-event-btn" class="danger-btn" style="display: none;">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
