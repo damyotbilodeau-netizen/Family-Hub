@@ -298,7 +298,7 @@ async function initApp() {
                     <div class="day-number">${day}</div>
                     <div class="day-content">
                         <div class="day-meals">
-                            <div class="meal-slot" data-meal-type="Déjeuner" id="dejeuner-${dateStr}"></div>
+                            <div class="meal-slot" data-meal-type="Déjeuner" id="déjeuner-${dateStr}"></div>
                             <div class="meal-slot" data-meal-type="Souper" id="souper-${dateStr}"></div>
                         </div>
                         <div class="day-events"></div>
