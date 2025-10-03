@@ -10,7 +10,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .sidebar-header h2 { color: var(--primary-color); margin-bottom: 2em; }
 #user-profile { font-size: 0.9em; margin-bottom: 2em; }
 .sidebar nav { display: flex; flex-direction: column; gap: 0.5em; flex-grow: 1; }
-.nav-item { text-decoration: none; color: #555; padding: 0.8em 1em; border-radius: 8px; transition: background-color 0.2s ease, color 0.2s ease; }
+.nav-item { text-decoration: none; color: #555; padding: 0.8em 1em; border-radius: 8px; transition: background-color: 0.2s ease, color: 0.2s ease; }
 .nav-item.active, .nav-item:hover { background-color: var(--primary-color); color: white; }
 .main-content { flex-grow: 1; padding: 2em; overflow-y: auto; }
 .view-container { background: var(--card-bg); border-radius: 12px; padding: 2em; box-shadow: var(--shadow); }
@@ -40,12 +40,36 @@ button { padding: 12px 20px; border: none; background-color: var(--primary-color
 #recipe-book-table th, #recipe-book-table td { border-bottom: 1px solid var(--border-color); padding: 12px; text-align: left; }
 #recipe-book-table th { background-color: #f8f9fa; cursor: pointer; position: sticky; top: 0; }
 #recipe-book-table tbody tr:hover { background-color: #f1f1f1; cursor: pointer; }
-.task-item, .grocery-item { display: flex; align-items: center; gap: 15px; padding: 12px 0; border-bottom: 1px solid #eee; }
-.task-item.completed span, .grocery-item.completed span { text-decoration: line-through; color: #999; }
-.task-item input, .grocery-item input { width: 20px; height: 20px; flex-shrink: 0; }
-.task-item-details, .grocery-item-details { flex-grow: 1; }
-.task-item-details .due-date { font-size: 0.8em; color: #777; }
-.task-item-details .assignee { font-size: 0.8em; font-style: italic; color: #555; }
+.grocery-item { display: flex; align-items: center; gap: 15px; padding: 12px 0; border-bottom: 1px solid #eee; }
+.grocery-item.completed span { text-decoration: line-through; color: #999; }
+.grocery-item input { width: 20px; height: 20px; flex-shrink: 0; }
 #groceries-to-generate { max-height: 40vh; overflow-y: auto; background: #f8f9fa; padding: 1em; border-radius: 8px; margin-bottom: 1em; }
 #recipe-details-content ul { list-style-type: none; padding-left: 0; }
 #recipe-details-content pre { white-space: pre-wrap; background: #f8f8f8; padding: 1em; border-radius: 4px; }
+#app-version { font-size: 0.8em; color: #999; text-align: center; margin-top: 1.5em; }
+.recipe-image-container { margin-bottom: 1.5em; }
+.recipe-image { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+
+/* --- Settings Page --- */
+.settings-section { margin-top: 2em; }
+.user-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); }
+.user-color-swatch { width: 20px; height: 20px; border-radius: 50%; margin-right: 15px; border: 1px solid #ccc; }
+.user-item span { flex-grow: 1; }
+.delete-user-btn { background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1.5rem; padding: 0 10px; }
+
+/* --- Advanced Task Styling --- */
+.task-item { display: block; background: #fff; border-radius: 8px; margin-bottom: 1em; padding: 1em; box-shadow: var(--shadow); border-left: 5px solid #ccc; }
+.task-item.priority-high { border-left-color: #e74c3c; }
+.task-item.priority-medium { border-left-color: #f39c12; }
+.task-item.priority-low { border-left-color: #3498db; }
+.task-item.status-completed .task-title { text-decoration: line-through; color: #999; }
+.task-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5em; }
+.task-title { font-weight: 600; font-size: 1.1em; }
+.task-item-body p { margin: 0 0 1em 0; }
+.task-meta { font-size: 0.8em; color: #777; display: flex; gap: 1em; margin-bottom: 1em; }
+.subtask-container { margin-top: 1em; border-top: 1px solid var(--border-color); padding-top: 1em; }
+.subtask-item { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.subtask-item .completed { text-decoration: line-through; color: #999; }
+.add-subtask-form { display: flex; gap: 5px; margin-top: 10px; }
+.add-subtask-form input { flex-grow: 1; }
+.add-subtask-form button { padding: 5px 10px; font-size: 1.2em; }
