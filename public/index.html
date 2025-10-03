@@ -36,12 +36,10 @@
                 <a href="#" class="nav-item" data-view="tasks">Tâches</a>
                 <a href="#" class="nav-item" data-view="groceries">Épicerie</a>
                 <a href="#" class="nav-item" data-view="recipes">Livre de recettes</a>
-                <a href="#" class="nav-item" data-view="settings">Paramètres</a>
             </nav>
             <div class="sidebar-footer">
                 <button id="import-csv-btn" class="btn-secondary btn-full-width">Importer un menu (CSV)</button>
                 <input type="file" id="csv-file-input" style="display:none;" accept=".csv">
-                <div id="app-version"></div>
             </div>
         </aside>
 
@@ -70,6 +68,15 @@
                     <select id="event-category"></select>
                 </div>
                 <div class="form-group">
+                    <label for="event-recurrence">Récurrence</label>
+                    <select id="event-recurrence">
+                        <option value="none">Aucune</option>
+                        <option value="weekly">Hebdomadaire</option>
+                        <option value="biweekly">Toutes les 2 semaines</option>
+                        <option value="monthly">Mensuelle</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Membres assignés</label>
                     <div id="event-assignees" class="checkbox-group"></div>
                 </div>
@@ -81,12 +88,9 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="/__/firebase/8.10.0/firebase-app.js"></script>
-    <script src="/__/firebase/8.10.0/firebase-auth.js"></script>
-    <script src="/__/firebase/8.10.0/firebase-firestore.js"></script>
-    <script src="/__/firebase/init.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
