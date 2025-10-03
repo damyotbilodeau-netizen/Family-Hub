@@ -1,18 +1,22 @@
 // --- CONFIGURATION ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDyJHwJ_Kdh46hElqo95csljR1uUT5uefo", authDomain: "family-hub-ade15.firebaseapp.com", projectId: "family-hub-ade15",
+    storageBucket: "family-hub-ade15.appspot.com", messagingSenderId: "21892917935", appId: "1:2189291-ade15.web.app/favicon.ico",
+    measurementId: "G-Z4LCVLXBTT"
+};
+
 const MEMBER_COLORS = { 'Papa': '#d1e7ff', 'Maman': '#f8d7da', 'Gardienne': '#d4edda', 'Enfants': '#fff3cd' };
 const CATEGORY_COLORS = { 'Rendez-vous': '#f5c6cb', 'École': '#ffeeba', 'Activité': '#b8daff', 'Tâche': '#a3cfbb', 'Repas': '#e2e3e5' };
 const DAY_ORDER = { 'Lundi': 1, 'Mardi': 2, 'Mercredi': 3, 'Jeudi': 4, 'Vendredi': 5, 'Samedi': 6, 'Dimanche': 7 };
 const RECURRING_ITEMS = ["Lait", "Jus d'orange", "Jambon", "Pain", "Fromage en tranches", "Œufs", "Yogourt", "Fruits variés (collations)"];
 
 // --- INITIALISATION FIREBASE ---
-// Firebase is now initialized by the /__/firebase/init.js script included in index.html
-var auth = firebase.auth();
-var db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 // --- SÉLECTEURS DOM ---
-function $(selector) {
-    return document.querySelector(selector);
-}
+const $ = (selector) => document.querySelector(selector);
 let currentDate = new Date();
 let allRecipes = [];
 let activeView = 'dashboard';
@@ -39,11 +43,6 @@ $("#logout-btn").addEventListener('click', () => auth.signOut());
 
 // --- LOGIQUE DE L'APPLICATION ---
 async function initApp() {
-    // --- App Version Indicator ---
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    $('#app-version').textContent = `Version: ${formattedDate}`;
-
     const familyId = "defaultFamily";
     const refs = {
         recipes: db.collection(`families/${familyId}/recipes`),
@@ -52,7 +51,6 @@ async function initApp() {
         tasks: db.collection(`families/${familyId}/tasks`),
         groceries: db.collection(`families/${familyId}/groceries`),
         settings: db.collection(`families/${familyId}/settings`),
-        users: db.collection(`families/${familyId}/users`),
         csv: db.collection(`families/${familyId}/csv`)
     };
 
@@ -241,21 +239,6 @@ async function initApp() {
         } else if (activeView === 'recipes') {
              mainContent.innerHTML = `<div class="view-container"><h2>Livre de recettes</h2><input type="text" id="recipe-search" placeholder="Rechercher une recette..."><div id="recipe-book-table-container"><table id="recipe-book-table"></table></div></div>`;
              renderRecipeBook();
-        } else if (activeView === 'settings') {
-            mainContent.innerHTML = `
-                <div class="view-container">
-                    <h2>Paramètres</h2>
-                    <div class="settings-section">
-                        <h3>Gérer les utilisateurs</h3>
-                        <form id="add-user-form" class="form-group">
-                            <input type="text" id="user-name" placeholder="Nom de l'utilisateur" required>
-                            <input type="color" id="user-color" value="#e2e3e5">
-                            <button type="submit">Ajouter un utilisateur</button>
-                        </form>
-                        <div id="user-list"></div>
-                    </div>
-                </div>`;
-            renderSettings();
         }
     }
 
@@ -315,7 +298,7 @@ async function initApp() {
                     <div class="day-number">${day}</div>
                     <div class="day-content">
                         <div class="day-meals">
-                            <div class="meal-slot" data-meal-type="Déjeuner" id="déjeuner-${dateStr}"></div>
+                            <div class="meal-slot" data-meal-type="Déjeuner" id="dejeuner-${dateStr}"></div>
                             <div class="meal-slot" data-meal-type="Souper" id="souper-${dateStr}"></div>
                         </div>
                         <div class="day-events"></div>
@@ -362,22 +345,41 @@ async function initApp() {
 
         // Logique pour écouter les événements (calendarEvents)
         refs.events.onSnapshot(snap => {
-            // D'abord, enlever les anciens événements pour éviter les doublons
             document.querySelectorAll('.event-item').forEach(el => el.remove());
+
+            const monthStart = new Date(year, month, 1);
+            const monthEnd = new Date(year, month + 1, 0);
 
             snap.forEach(doc => {
                 const event = { id: doc.id, ...doc.data() };
-                const dayCell = document.querySelector(`.calendar-day[data-date="${event.date}"]`);
-                if (dayCell) {
-                    const eventsContainer = dayCell.querySelector('.day-events'); // Keep events in their own container
-                    const eventEl = document.createElement('div');
-                    eventEl.className = 'event-item';
-                    eventEl.textContent = event.title;
-                    eventEl.dataset.eventId = event.id;
-                    // Appliquer la couleur de la catégorie et une couleur de texte contrastante
-                    eventEl.style.backgroundColor = CATEGORY_COLORS[event.category] || '#e2e3e5';
-                    eventEl.style.color = '#333';
-                    eventsContainer.appendChild(eventEl);
+                const eventStartDate = new Date(event.date + 'T12:00:00');
+
+                // Boucle pour gérer la récurrence
+                for (let d = new Date(eventStartDate); d <= monthEnd; ) {
+                    if (d >= monthStart) {
+                        const dateStr = d.toISOString().split('T')[0];
+                        const dayCell = document.querySelector(`.calendar-day[data-date="${dateStr}"]`);
+                        if (dayCell) {
+                            const eventsContainer = dayCell.querySelector('.day-events');
+                            const eventEl = document.createElement('div');
+                            eventEl.className = 'event-item';
+                            eventEl.textContent = event.title;
+                            eventEl.dataset.eventId = event.id;
+                            eventEl.style.backgroundColor = CATEGORY_COLORS[event.category] || '#e2e3e5';
+                            eventEl.style.color = '#333';
+                            eventsContainer.appendChild(eventEl);
+                        }
+                    }
+
+                    if (event.recurrence === 'weekly') {
+                        d.setDate(d.getDate() + 7);
+                    } else if (event.recurrence === 'biweekly') {
+                        d.setDate(d.getDate() + 14);
+                    } else if (event.recurrence === 'monthly') {
+                        d.setMonth(d.getMonth() + 1);
+                    } else {
+                        break; // Pas de récurrence
+                    }
                 }
             });
         });
@@ -427,13 +429,7 @@ async function initApp() {
             }
         }
 
-        let imageHTML = '';
-        if (recipe.Image && recipe.Image.trim() !== '') {
-            imageHTML = `<div class="recipe-image-container"><img src="${recipe.Image}" alt="${recipe.Plat}" class="recipe-image"></div>`;
-        }
-
         $("#recipe-details-content").innerHTML = `
-            ${imageHTML}
             <h3>${recipe.Plat}</h3>
             <h4>Ingrédients :</h4>
             ${ingredientsHTML}
@@ -443,24 +439,14 @@ async function initApp() {
 
         // Logique pour assigner un chef
         const chefContainer = $("#chef-assignment-container");
+        const chefOptions = Object.keys(MEMBER_COLORS).map(chef => `<option value="${chef}">${chef}</option>`).join('');
         chefContainer.innerHTML = `<label for="chef-select">Chef assigné :</label>
-                                 <select id="chef-select"><option value="">-- Choisir --</option></select>`;
+                                 <select id="chef-select"><option value="">-- Choisir --</option>${chefOptions}</select>`;
 
-        // Populate users dynamically
-        refs.users.get().then(snap => {
-            const chefSelect = $("#chef-select");
-            if (!chefSelect) return;
-            snap.forEach(doc => {
-                const user = doc.data();
-                chefSelect.innerHTML += `<option value="${user.name}">${user.name}</option>`;
-            });
-
-            // Set the current value after populating
-            refs.meals.doc(activeDate).get().then(doc => {
-                if (doc.exists && doc.data()[activeMealType.toLowerCase()]) {
-                    $("#chef-select").value = doc.data()[activeMealType.toLowerCase()].chef || "";
-                }
-            });
+        refs.meals.doc(activeDate).get().then(doc => {
+            if (doc.exists && doc.data()[activeMealType.toLowerCase()]) {
+                $("#chef-select").value = doc.data()[activeMealType.toLowerCase()].chef || "";
+            }
         });
 
         $("#chef-select").onchange = (e) => {
@@ -603,6 +589,7 @@ async function initApp() {
                 $('#event-title').value = event.title;
                 $('#event-category').value = event.category;
                 $('#event-date').value = event.date; // Overwrite date if editing
+                $('#event-recurrence').value = event.recurrence || 'none';
                 if (event.assignees) {
                     event.assignees.forEach(assignee => {
                         const checkbox = $(`#assignee-${assignee}`);
@@ -667,18 +654,12 @@ async function initApp() {
                 title: $('#event-title').value,
                 date: $('#event-date').value,
                 category: $('#event-category').value,
+                recurrence: $('#event-recurrence').value,
                 assignees: assignees
             };
             if (eventId) await refs.events.doc(eventId).update(eventData);
             else await refs.events.add(eventData);
             closeModal('event-modal');
-        } else if (formId === 'add-user-form') {
-            const userName = $('#user-name').value.trim();
-            const userColor = $('#user-color').value;
-            if (userName) {
-                refs.users.add({ name: userName, color: userColor });
-                e.target.reset();
-            }
         } else if (formId === 'dashboard-add-grocery-form') {
             const input = $('#dashboard-grocery-item-name');
             const itemName = input.value.trim();
@@ -1039,37 +1020,6 @@ async function initApp() {
         }
 
         openModal('edit-recipe-modal');
-    }
-
-    // --- GESTION DES PARAMÈTRES ---
-    function renderSettings() {
-        const userList = $('#user-list');
-        if (!userList) return;
-
-        // Event delegation for delete buttons
-        userList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-user-btn')) {
-                const userId = e.target.dataset.id;
-                if (confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
-                    refs.users.doc(userId).delete();
-                }
-            }
-        });
-
-        refs.users.onSnapshot(snap => {
-            userList.innerHTML = '';
-            snap.forEach(doc => {
-                const user = { id: doc.id, ...doc.data() };
-                const item = document.createElement('div');
-                item.className = 'user-item';
-                item.innerHTML = `
-                    <span class="user-color-swatch" style="background-color: ${user.color};"></span>
-                    <span>${user.name}</span>
-                    <button class="delete-user-btn" data-id="${user.id}">&times;</button>
-                `;
-                userList.appendChild(item);
-            });
-        });
     }
 
     // Initialisation
