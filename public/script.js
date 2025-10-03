@@ -1,22 +1,18 @@
 // --- CONFIGURATION ---
-const firebaseConfig = {
-    apiKey: "AIzaSyDyJHwJ_Kdh46hElqo95csljR1uUT5uefo", authDomain: "family-hub-ade15.firebaseapp.com", projectId: "family-hub-ade15",
-    storageBucket: "family-hub-ade15.appspot.com", messagingSenderId: "21892917935", appId: "1:2189291-ade15.web.app/favicon.ico",
-    measurementId: "G-Z4LCVLXBTT"
-};
-
 const MEMBER_COLORS = { 'Papa': '#d1e7ff', 'Maman': '#f8d7da', 'Gardienne': '#d4edda', 'Enfants': '#fff3cd' };
 const CATEGORY_COLORS = { 'Rendez-vous': '#f5c6cb', 'École': '#ffeeba', 'Activité': '#b8daff', 'Tâche': '#a3cfbb', 'Repas': '#e2e3e5' };
 const DAY_ORDER = { 'Lundi': 1, 'Mardi': 2, 'Mercredi': 3, 'Jeudi': 4, 'Vendredi': 5, 'Samedi': 6, 'Dimanche': 7 };
 const RECURRING_ITEMS = ["Lait", "Jus d'orange", "Jambon", "Pain", "Fromage en tranches", "Œufs", "Yogourt", "Fruits variés (collations)"];
 
 // --- INITIALISATION FIREBASE ---
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Firebase is now initialized by the /__/firebase/init.js script included in index.html
+var auth = firebase.auth();
+var db = firebase.firestore();
 
 // --- SÉLECTEURS DOM ---
-const $ = (selector) => document.querySelector(selector);
+function $(selector) {
+    return document.querySelector(selector);
+}
 let currentDate = new Date();
 let allRecipes = [];
 let activeView = 'dashboard';
@@ -43,6 +39,11 @@ $("#logout-btn").addEventListener('click', () => auth.signOut());
 
 // --- LOGIQUE DE L'APPLICATION ---
 async function initApp() {
+    // --- App Version Indicator ---
+    const now = new Date();
+    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    $('#app-version').textContent = `Version: ${formattedDate}`;
+
     const familyId = "defaultFamily";
     const refs = {
         recipes: db.collection(`families/${familyId}/recipes`),
@@ -51,6 +52,7 @@ async function initApp() {
         tasks: db.collection(`families/${familyId}/tasks`),
         groceries: db.collection(`families/${familyId}/groceries`),
         settings: db.collection(`families/${familyId}/settings`),
+        users: db.collection(`families/${familyId}/users`),
         csv: db.collection(`families/${familyId}/csv`)
     };
 
@@ -72,7 +74,6 @@ async function initApp() {
     }
 
     // --- GESTION DES BOUTONS DE FERMETURE (X) ---
-    // Approche directe pour garantir le fonctionnement
     document.querySelectorAll('.close-btn').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation(); // Empêche d'autres clics de se déclencher
@@ -117,19 +118,11 @@ async function initApp() {
 
         recipesData.forEach(recipe => {
             if (recipe.Plat) {
-                // --- Data Normalization on Import ---
-                // Check if ingredients are a simple list and not the structured format.
                 if (recipe.Ingrédients && !recipe.Ingrédients.trim().startsWith('[')) {
-                    // Convert the simple list into the structured JSON format.
                     const ingredientsArray = recipe.Ingrédients.split('\n')
                         .map(line => line.trim())
                         .filter(line => line)
-                        .map(line => {
-                            // A simple conversion: assume the whole line is the name.
-                            // More complex parsing could be added here later if needed.
-                            return { qte: '', unite: '', nom: line };
-                        });
-                    // Store the normalized, structured data.
+                        .map(line => ({ qte: '', unite: '', nom: line }));
                     recipe.Ingrédients = JSON.stringify(ingredientsArray);
                 }
 
@@ -137,22 +130,20 @@ async function initApp() {
             }
         });
 
-        // --- Set the new cycle start date to the next Monday ---
         const today = new Date();
-        const dayOfWeek = today.getDay(); // Sunday = 0, Monday = 1, etc.
+        const dayOfWeek = today.getDay();
         const daysUntilMonday = (dayOfWeek === 0) ? 1 : (8 - dayOfWeek);
         const nextMonday = new Date(today);
         nextMonday.setDate(today.getDate() + daysUntilMonday);
-        nextMonday.setHours(0, 0, 0, 0); // Normalize to the start of the day
+        nextMonday.setHours(0, 0, 0, 0);
 
-        // Save the new start date to Firestore
         await refs.settings.doc('mealCycle').set({ startDate: nextMonday });
-        cycleStartDate = nextMonday; // Update the in-app variable
+        cycleStartDate = nextMonday;
 
         await batch.commit();
         alert(`Recettes importées avec succès!`);
 
-        await fetchAndSortRecipes(); // Re-fetch and re-sort recipes
+        await fetchAndSortRecipes();
         renderMainContent();
     }
 
@@ -167,7 +158,6 @@ async function initApp() {
         });
     });
 
-    // Fetch meal cycle start date from settings
     const settingsDoc = await refs.settings.doc('mealCycle').get();
     if (settingsDoc.exists) {
         cycleStartDate = settingsDoc.data().startDate.toDate();
@@ -176,12 +166,10 @@ async function initApp() {
     async function fetchAndSortRecipes() {
         const recipesSnap = await refs.recipes.get();
         allRecipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Tri des recettes pour assurer la cohérence de la recherche de repas automatiques
         allRecipes.sort((a, b) => (a.Semaine - b.Semaine) || ((DAY_ORDER[a.Jour] || 99) - (DAY_ORDER[b.Jour] || 99)) || a.Repas.localeCompare(b.Repas));
     }
 
     await fetchAndSortRecipes();
-
 
     function renderMainContent() {
         const mainContent = $('.main-content');
@@ -195,7 +183,6 @@ async function initApp() {
                     <div class="dashboard-card" id="dashboard-groceries"></div>
                 </div>
             </div>`;
-            // Use setTimeout to ensure the DOM is updated before we try to access it.
             setTimeout(renderDashboard, 0);
         }
         else if (activeView === 'calendar') {
@@ -218,6 +205,11 @@ async function initApp() {
                     <textarea id="task-description" placeholder="Description..."></textarea>
                     <input type="date" id="task-due-date">
                     <select id="task-assignee"></select>
+                    <select id="task-priority">
+                        <option value="low">Basse</option>
+                        <option value="medium" selected>Moyenne</option>
+                        <option value="high">Haute</option>
+                    </select>
                     <button type="submit">Ajouter Tâche</button>
                 </form>
                 <div id="task-list"></div>
@@ -239,15 +231,28 @@ async function initApp() {
         } else if (activeView === 'recipes') {
              mainContent.innerHTML = `<div class="view-container"><h2>Livre de recettes</h2><input type="text" id="recipe-search" placeholder="Rechercher une recette..."><div id="recipe-book-table-container"><table id="recipe-book-table"></table></div></div>`;
              renderRecipeBook();
+        } else if (activeView === 'settings') {
+            mainContent.innerHTML = `
+                <div class="view-container">
+                    <h2>Paramètres</h2>
+                    <div class="settings-section">
+                        <h3>Gérer les utilisateurs</h3>
+                        <form id="add-user-form" class="form-group">
+                            <input type="text" id="user-name" placeholder="Nom de l'utilisateur" required>
+                            <input type="color" id="user-color" value="#e2e3e5">
+                            <button type="submit">Ajouter un utilisateur</button>
+                        </form>
+                        <div id="user-list"></div>
+                    </div>
+                </div>`;
+            renderSettings();
         }
     }
 
-    // --- TABLEAU DE BORD ---
     async function renderDashboard() {
         const today = new Date();
         const dateStr = today.toISOString().split('T')[0];
 
-        // Meals
         const mealDoc = await refs.meals.doc(dateStr).get();
         const mealData = mealDoc.data() || {};
         const dashboardMeals = $('#dashboard-meals');
@@ -257,14 +262,12 @@ async function initApp() {
             dashboardMeals.innerHTML += `<p><strong>${repas}:</strong> ${meal && meal.plat ? meal.plat : 'Non planifié'}</p>`;
         });
 
-        // Tasks
         const tasksSnap = await refs.tasks.where('dueDate', '==', dateStr).where('completed', '==', false).get();
         const dashboardTasks = $('#dashboard-tasks');
         dashboardTasks.innerHTML = '<h3>Tâches du jour</h3>';
         if (tasksSnap.empty) dashboardTasks.innerHTML += '<p>Aucune tâche pour aujourd\'hui.</p>';
         else tasksSnap.forEach(doc => dashboardTasks.innerHTML += `<p>${doc.data().title}</p>`);
 
-        // Groceries Quick Add
         const dashboardGroceries = $('#dashboard-groceries');
         if (dashboardGroceries) {
             dashboardGroceries.innerHTML = `
@@ -278,7 +281,6 @@ async function initApp() {
         }
     }
 
-    // --- CALENDRIER ---
     function renderCalendar(date) {
         const year = date.getFullYear(), month = date.getMonth();
         $("#month-year-header").textContent = date.toLocaleString('fr-CA', { month: 'long', year: 'numeric' });
@@ -298,7 +300,7 @@ async function initApp() {
                     <div class="day-number">${day}</div>
                     <div class="day-content">
                         <div class="day-meals">
-                            <div class="meal-slot" data-meal-type="Déjeuner" id="dejeuner-${dateStr}"></div>
+                            <div class="meal-slot" data-meal-type="Déjeuner" id="déjeuner-${dateStr}"></div>
                             <div class="meal-slot" data-meal-type="Souper" id="souper-${dateStr}"></div>
                         </div>
                         <div class="day-events"></div>
@@ -306,7 +308,6 @@ async function initApp() {
                 </div>`;
         }
 
-        // Ajout des écouteurs d'événements après la création du HTML
         const prevBtn = $("#prev-month-btn");
         const nextBtn = $("#next-month-btn");
         if (prevBtn && nextBtn) {
@@ -318,7 +319,6 @@ async function initApp() {
     }
 
     function listenForCalendarData(year, month) {
-        // Logique pour écouter les repas (meals)
         refs.meals.onSnapshot(snap => {
             const manualMeals = {};
             snap.forEach(doc => manualMeals[doc.id] = doc.data());
@@ -337,13 +337,12 @@ async function initApp() {
                     const manualMeal = manual ? manual[repas.toLowerCase()] : undefined;
                     const autoMeal = allRecipes.find(r => r.Semaine == week && r.Jour === dayName && r.Repas === repas);
 
-                    const mealToDisplay = manualMeal !== undefined ? manualMeal : (autoMeal ? { recipeId: autoMeal.id, plat: autoMeal.Plat } : null);
+                    const mealToDisplay = manualMeal !== undefined ? manualMeal : (autoMeal ? { recipeId: autoMeal.id, plat: autoMeal.Plat, Image: autoMeal.Image } : null);
                     updateMealSlot(`${mealTypeLower}-${dateStr}`, mealToDisplay);
                 });
             });
         });
 
-        // Logique pour écouter les événements (calendarEvents)
         refs.events.onSnapshot(snap => {
             document.querySelectorAll('.event-item').forEach(el => el.remove());
 
@@ -354,7 +353,6 @@ async function initApp() {
                 const event = { id: doc.id, ...doc.data() };
                 const eventStartDate = new Date(event.date + 'T12:00:00');
 
-                // Boucle pour gérer la récurrence
                 for (let d = new Date(eventStartDate); d <= monthEnd; ) {
                     if (d >= monthStart) {
                         const dateStr = d.toISOString().split('T')[0];
@@ -378,14 +376,13 @@ async function initApp() {
                     } else if (event.recurrence === 'monthly') {
                         d.setMonth(d.getMonth() + 1);
                     } else {
-                        break; // Pas de récurrence
+                        break;
                     }
                 }
             });
         });
     }
 
-    // --- GESTION DES REPAS ---
     let activeDate, activeMealType;
 
     $('#change-meal-btn').addEventListener('click', () => {
@@ -400,36 +397,22 @@ async function initApp() {
         let ingredientsHTML = '<ul><li>Aucun ingrédient listé.</li></ul>';
         if (recipe.Ingrédients) {
             try {
-                let ingredientsString = recipe.Ingrédients;
-                let ingredients;
-
-                // First, try to parse as valid JSON
-                try {
-                    ingredients = JSON.parse(ingredientsString);
-                } catch (e) {
-                    // If it fails, use the custom parser for the malformed format
-                    if (ingredientsString.includes('{qte:')) {
-                        ingredients = parseMalformedJson(ingredientsString);
-                    } else {
-                        // If it's not the malformed object format, treat as a simple list
-                        throw new Error("Not a known object format, treating as a list.");
-                    }
-                }
-
+                let ingredients = JSON.parse(recipe.Ingrédients);
                 if (Array.isArray(ingredients)) {
-                    ingredientsHTML = '<ul>' + ingredients.map(ing => {
-                        const parts = [ing.qte, ing.unite, ing.nom].filter(Boolean); // Filter out empty/null parts
-                        return `<li>${parts.join(' ')}</li>`;
-                    }).join('') + '</ul>';
+                    ingredientsHTML = '<ul>' + ingredients.map(ing => `<li>${[ing.qte, ing.unite, ing.nom].filter(Boolean).join(' ')}</li>`).join('') + '</ul>';
                 }
             } catch (e) {
-                console.error("Could not parse ingredients, falling back to plain text.", e);
-                // If parsing fails, treat it as a simple newline-separated string
                 ingredientsHTML = `<ul>${recipe.Ingrédients.split('\n').map(i => `<li>${i}</li>`).join('')}</ul>`;
             }
         }
 
+        let imageHTML = '';
+        if (recipe.Image && recipe.Image.trim() !== '') {
+            imageHTML = `<div class="recipe-image-container"><img src="${recipe.Image}" alt="${recipe.Plat}" class="recipe-image"></div>`;
+        }
+
         $("#recipe-details-content").innerHTML = `
+            ${imageHTML}
             <h3>${recipe.Plat}</h3>
             <h4>Ingrédients :</h4>
             ${ingredientsHTML}
@@ -437,16 +420,23 @@ async function initApp() {
             <pre>${recipe.Recette || ''}</pre>
         `;
 
-        // Logique pour assigner un chef
         const chefContainer = $("#chef-assignment-container");
-        const chefOptions = Object.keys(MEMBER_COLORS).map(chef => `<option value="${chef}">${chef}</option>`).join('');
         chefContainer.innerHTML = `<label for="chef-select">Chef assigné :</label>
-                                 <select id="chef-select"><option value="">-- Choisir --</option>${chefOptions}</select>`;
+                                 <select id="chef-select"><option value="">-- Choisir --</option></select>`;
 
-        refs.meals.doc(activeDate).get().then(doc => {
-            if (doc.exists && doc.data()[activeMealType.toLowerCase()]) {
-                $("#chef-select").value = doc.data()[activeMealType.toLowerCase()].chef || "";
-            }
+        refs.users.get().then(snap => {
+            const chefSelect = $("#chef-select");
+            if (!chefSelect) return;
+            snap.forEach(doc => {
+                const user = doc.data();
+                chefSelect.innerHTML += `<option value="${user.name}">${user.name}</option>`;
+            });
+
+            refs.meals.doc(activeDate).get().then(doc => {
+                if (doc.exists && doc.data()[activeMealType.toLowerCase()]) {
+                    $("#chef-select").value = doc.data()[activeMealType.toLowerCase()].chef || "";
+                }
+            });
         });
 
         $("#chef-select").onchange = (e) => {
@@ -464,48 +454,6 @@ async function initApp() {
         openModal('recipe-details-modal');
     }
 
-    function parseMalformedJson(str) {
-        const result = [];
-        // Remove outer brackets and split into individual object strings
-        const objects = str.replace(/^\[|\]$/g, '').split('},{');
-
-        objects.forEach(objStr => {
-            const obj = {};
-            // Clean up braces from split
-            objStr = objStr.replace(/^{|}$/g, '');
-
-            // Split by comma, but not commas inside a value
-            const pairs = objStr.split(',');
-
-            let currentKey = '';
-            let currentValue = '';
-
-            pairs.forEach(pair => {
-                const parts = pair.split(':');
-                const key = parts[0].trim();
-                const value = parts.slice(1).join(':').trim();
-
-                if (['qte', 'unite', 'nom'].includes(key)) {
-                    // If we find a new valid key, save the previous key-value pair
-                    if (currentKey) {
-                        obj[currentKey] = currentValue.trim();
-                    }
-                    currentKey = key;
-                    currentValue = value;
-                } else {
-                    // This part is a continuation of the previous value (e.g., a comma in the name)
-                    currentValue += ',' + pair;
-                }
-            });
-            // Save the last key-value pair
-            if (currentKey) {
-                obj[currentKey] = currentValue.trim();
-            }
-            result.push(obj);
-        });
-        return result;
-    }
-
     function showRecipeSelection() {
         const filteredRecipes = allRecipes
             .filter(r => r.Repas === activeMealType)
@@ -520,7 +468,7 @@ async function initApp() {
 
         const searchInput = $("#recipe-select-search");
         if (searchInput) {
-            searchInput.value = ''; // Clear previous search
+            searchInput.value = '';
             searchInput.oninput = (e) => {
                 const query = e.target.value.toLowerCase();
                 document.querySelectorAll('.recipe-select-item').forEach(item => {
@@ -532,8 +480,6 @@ async function initApp() {
         openModal('recipe-select-modal');
     }
 
-    // --- GESTION DES CLICS DANS LA MODALE DE SÉLECTION DE REPAS ---
-    // Approche directe pour garantir le fonctionnement
     $('#recipe-select-modal').addEventListener('click', async (e) => {
         const target = e.target;
         const modal = $('#recipe-select-modal');
@@ -543,7 +489,6 @@ async function initApp() {
 
         const mealKey = mealType.toLowerCase();
 
-        // Gérer le clic sur un item de recette
         const recipeItem = target.closest('.recipe-select-item');
         if (recipeItem) {
             const { id, plat } = recipeItem.dataset;
@@ -555,19 +500,19 @@ async function initApp() {
             await refs.meals.doc(date).set(update, { merge: true });
             closeModal('recipe-select-modal');
         }
-        // Gérer le clic sur le bouton "Retirer ce repas"
         else if (target.id === 'remove-meal-btn') {
             const update = { [mealKey]: null };
             await refs.meals.doc(date).set(update, { merge: true });
             closeModal('recipe-select-modal');
         }
-        // Gérer le clic sur le bouton "Ajouter une recette"
         else if (target.id === 'add-new-recipe-btn') {
-            showEditRecipeModal();
+            closeModal('recipe-select-modal');
+            showEditRecipeModal(null, () => {
+                showRecipeSelection();
+            });
         }
     });
 
-    // --- GESTION DES ÉVÉNEMENTS ---
     async function showEventModal(date, eventId = null) {
         const form = $('#event-form');
         form.reset();
@@ -576,11 +521,16 @@ async function initApp() {
         $('#delete-event-btn').style.display = eventId ? 'inline-block' : 'none';
         $('#event-modal-title').textContent = eventId ? 'Modifier l\'événement' : 'Ajouter un événement';
 
-        // Populate categories and assignees
         $('#event-category').innerHTML = Object.keys(CATEGORY_COLORS).map(cat => `<option>${cat}</option>`).join('');
-        $('#event-assignees').innerHTML = Object.keys(MEMBER_COLORS).map(member =>
-            `<div><input type="checkbox" id="assignee-${member}" value="${member}"><label for="assignee-${member}">${member}</label></div>`
-        ).join('');
+
+        const assigneesContainer = $('#event-assignees');
+        assigneesContainer.innerHTML = '';
+        refs.users.get().then(snap => {
+            snap.forEach(doc => {
+                const user = doc.data();
+                assigneesContainer.innerHTML += `<div><input type="checkbox" id="assignee-${doc.id}" value="${user.name}"><label for="assignee-${doc.id}">${user.name}</label></div>`;
+            });
+        });
 
         if (eventId) {
             const doc = await refs.events.doc(eventId).get();
@@ -588,7 +538,7 @@ async function initApp() {
                 const event = doc.data();
                 $('#event-title').value = event.title;
                 $('#event-category').value = event.category;
-                $('#event-date').value = event.date; // Overwrite date if editing
+                $('#event-date').value = event.date;
                 $('#event-recurrence').value = event.recurrence || 'none';
                 if (event.assignees) {
                     event.assignees.forEach(assignee => {
@@ -602,7 +552,6 @@ async function initApp() {
         openModal('event-modal');
     }
 
-    // --- GESTION DES ÉVÉNEMENTS DÉLÉGUÉS ---
     $('#app-container').addEventListener('click', async (e) => {
         const target = e.target;
 
@@ -615,10 +564,8 @@ async function initApp() {
         } else if (target.id === 'generate-grocery-list-btn') {
             generateWeeklyGroceryList();
         }
-        // Then handle interactions with the main content area
         else if (target.closest('.meal-slot')) {
             const mealSlot = target.closest('.meal-slot');
-            // Set activeDate and activeMealType for other functions to use
             activeDate = mealSlot.id.substring(mealSlot.id.indexOf('-') + 1);
             activeMealType = mealSlot.dataset.mealType;
 
@@ -626,7 +573,6 @@ async function initApp() {
             if (mealData.recipeId) {
                 showRecipeDetails(mealData.recipeId);
             } else {
-                // Pass the context to the modal before opening it
                 const recipeSelectModal = $('#recipe-select-modal');
                 recipeSelectModal.dataset.date = activeDate;
                 recipeSelectModal.dataset.mealType = activeMealType;
@@ -636,8 +582,7 @@ async function initApp() {
         } else if (target.closest('.event-item')) {
             showEventModal(null, target.closest('.event-item').dataset.eventId);
         } else if (target.closest('.calendar-day[data-date]')) {
-            // This should be last to act as a fallback for clicking on an empty day area
-            if (!target.closest('.day-content')) { // Avoid triggering when clicking inside content
+            if (!target.closest('.day-content')) {
                 showEventModal(target.closest('.calendar-day').dataset.date);
             }
         }
@@ -660,6 +605,13 @@ async function initApp() {
             if (eventId) await refs.events.doc(eventId).update(eventData);
             else await refs.events.add(eventData);
             closeModal('event-modal');
+        } else if (formId === 'add-user-form') {
+            const userName = $('#user-name').value.trim();
+            const userColor = $('#user-color').value;
+            if (userName) {
+                refs.users.add({ name: userName, color: userColor });
+                e.target.reset();
+            }
         } else if (formId === 'dashboard-add-grocery-form') {
             const input = $('#dashboard-grocery-item-name');
             const itemName = input.value.trim();
@@ -679,7 +631,7 @@ async function initApp() {
 
         slot.dataset.mealData = JSON.stringify(mealData || {});
 
-        slot.style.backgroundColor = 'transparent'; // Reset color
+        slot.style.backgroundColor = 'transparent';
 
         if (mealData && mealData.plat) {
             if (mealData.chef && MEMBER_COLORS[mealData.chef]) {
@@ -693,52 +645,128 @@ async function initApp() {
         }
     }
 
-    // --- TÂCHES ---
     function renderTasks() {
         const assigneeSelect = $('#task-assignee');
         if (assigneeSelect) {
-            assigneeSelect.innerHTML = Object.keys(MEMBER_COLORS).map(m => `<option>${m}</option>`).join('');
+            refs.users.get().then(snap => {
+                assigneeSelect.innerHTML = '<option value="">Non assigné</option>';
+                snap.forEach(doc => {
+                    const user = doc.data();
+                    assigneeSelect.innerHTML += `<option value="${user.name}">${user.name}</option>`;
+                });
+            });
         }
 
         const addTaskForm = $('#add-task-form');
         if (addTaskForm) {
-            addTaskForm.addEventListener('submit', e => {
+            addTaskForm.onsubmit = (e) => {
                 e.preventDefault();
                 refs.tasks.add({
                     title: $('#task-title').value,
                     description: $('#task-description').value,
                     dueDate: $('#task-due-date').value,
                     assignee: $('#task-assignee').value,
-                    completed: false,
+                    priority: $('#task-priority').value,
+                    status: 'not-started',
+                    subtasks: [],
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 addTaskForm.reset();
-            });
+            };
         }
 
-        refs.tasks.orderBy('createdAt', 'asc').onSnapshot(snap => {
-            const taskList = $('#task-list');
-            if (!taskList) return;
+        const taskList = $('#task-list');
+        if (!taskList) return;
+
+        taskList.addEventListener('change', e => {
+            const target = e.target;
+            if (target.classList.contains('task-status-select')) {
+                const taskId = target.dataset.id;
+                const newStatus = target.value;
+                refs.tasks.doc(taskId).update({ status: newStatus });
+            }
+            if (target.classList.contains('subtask-checkbox')) {
+                const taskId = target.dataset.taskId;
+                const subtaskIndex = parseInt(target.dataset.index, 10);
+
+                refs.tasks.doc(taskId).get().then(doc => {
+                    if (doc.exists) {
+                        const task = doc.data();
+                        const subtasks = task.subtasks || [];
+                        subtasks[subtaskIndex].completed = target.checked;
+                        refs.tasks.doc(taskId).update({ subtasks });
+                    }
+                });
+            }
+        });
+
+        taskList.addEventListener('submit', e => {
+            e.preventDefault();
+            const target = e.target;
+            if (target.classList.contains('add-subtask-form')) {
+                const taskId = target.dataset.id;
+                const input = target.querySelector('.subtask-input');
+                const subtaskTitle = input.value.trim();
+                if (subtaskTitle) {
+                    const newSubtask = { title: subtaskTitle, completed: false };
+                    refs.tasks.doc(taskId).update({
+                        subtasks: firebase.firestore.FieldValue.arrayUnion(newSubtask)
+                    });
+                    input.value = '';
+                }
+            }
+        });
+
+        refs.tasks.orderBy('createdAt', 'desc').onSnapshot(snap => {
             taskList.innerHTML = '';
+            if (snap.empty) {
+                taskList.innerHTML = '<p>Aucune tâche pour le moment.</p>';
+                return;
+            }
             snap.forEach(doc => {
                 const task = {id: doc.id, ...doc.data()};
                 const item = document.createElement('div');
-                item.className = `task-item ${task.completed ? 'completed' : ''}`;
+                item.className = `task-item priority-${task.priority || 'medium'} status-${task.status || 'not-started'}`;
+
+                const subtasksHTML = (task.subtasks || []).map((sub, index) => `
+                    <div class="subtask-item">
+                        <input type="checkbox" class="subtask-checkbox" data-task-id="${task.id}" data-index="${index}" ${sub.completed ? 'checked' : ''}>
+                        <span class="${sub.completed ? 'completed' : ''}">${sub.title}</span>
+                    </div>
+                `).join('');
+
                 item.innerHTML = `
-                    <input type="checkbox" ${task.completed ? 'checked' : ''}>
-                    <div class="task-item-details">
-                        <span>${task.title}</span>
-                        ${task.dueDate ? `<div class="due-date">Échéance: ${task.dueDate}</div>` : ''}
-                        ${task.assignee ? `<div class="assignee" style="color:${MEMBER_COLORS[task.assignee] || '#333'}">Assigné à: ${task.assignee}</div>` : ''}
+                    <div class="task-item-main">
+                        <div class="task-item-header">
+                            <span class="task-title">${task.title}</span>
+                            <select class="task-status-select" data-id="${task.id}">
+                                <option value="not-started" ${task.status === 'not-started' ? 'selected' : ''}>Non commencé</option>
+                                <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>En cours</option>
+                                <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Terminé</option>
+                            </select>
+                        </div>
+                        <div class="task-item-body">
+                            <p>${task.description || ''}</p>
+                            <div class="task-meta">
+                                ${task.dueDate ? `<div class="due-date">Échéance: ${task.dueDate}</div>` : ''}
+                                ${task.assignee ? `<div class="assignee">Assigné à: ${task.assignee}</div>` : ''}
+                            </div>
+                            <div class="subtask-container">
+                                <h4>Sous-tâches</h4>
+                                ${subtasksHTML}
+                                <form class="add-subtask-form" data-id="${task.id}">
+                                    <input type="text" class="subtask-input" placeholder="Ajouter une sous-tâche...">
+                                    <button type="submit">+</button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 `;
-                item.querySelector('input').addEventListener('change', (e) => refs.tasks.doc(task.id).update({ completed: e.target.checked }));
                 taskList.appendChild(item);
             });
         });
     }
 
-    // --- ÉPICERIE ---
     function renderGroceries() {
         const addGroceryForm = $('#add-grocery-form');
         if (addGroceryForm) {
@@ -765,7 +793,6 @@ async function initApp() {
         });
     }
 
-    // --- GÉNÉRATION DE LA LISTE D'ÉPICERIE ---
     async function generateWeeklyGroceryList() {
         if (!confirm("Voulez-vous remplacer la liste d'épicerie actuelle par une nouvelle liste générée pour les 7 prochains jours ?")) {
             return;
@@ -776,7 +803,6 @@ async function initApp() {
         const endDate = new Date();
         endDate.setDate(startDate.getDate() + 7);
 
-        // --- Helper functions for aggregation ---
         const parseQuantity = (qte) => {
             if (!qte) return 0;
             if (String(qte).includes('/')) {
@@ -788,7 +814,6 @@ async function initApp() {
 
         const normalizeName = (name) => {
             let lower = name.toLowerCase().trim();
-            // Simple pluralization rule for this context
             if (lower.endsWith('s') || lower.endsWith('x')) {
                 lower = lower.slice(0, -1);
             }
@@ -804,12 +829,11 @@ async function initApp() {
                 if (typeof quantity === 'number' && !isNaN(quantity)) {
                     existing.total += quantity;
                 }
-                // If units differ, we could add more complex logic here. For now, keep the first one.
             } else {
                 ingredientMap.set(normalized, {
                     total: quantity,
                     unit: item.unite || '',
-                    originalName: item.nom // Keep original name for display
+                    originalName: item.nom
                 });
             }
         };
@@ -818,14 +842,13 @@ async function initApp() {
             const normalized = normalizeName(text);
             if (!ingredientMap.has(normalized)) {
                 ingredientMap.set(normalized, {
-                    total: 0, // No quantity to sum
+                    total: 0,
                     unit: '',
                     originalName: text
                 });
             }
         };
 
-        // 1. Iterate through the next 7 days to find planned meals
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
             const current = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
@@ -848,25 +871,13 @@ async function initApp() {
                     const recipe = allRecipes.find(r => r.id === mealToConsider.recipeId);
                     if (recipe && recipe.Ingrédients) {
                         try {
-                            let ingredients;
-                            // Use the same robust parsing logic as showRecipeDetails
-                            try {
-                                ingredients = JSON.parse(recipe.Ingrédients);
-                            } catch (e) {
-                                if (recipe.Ingrédients.includes('{qte:')) {
-                                    ingredients = parseMalformedJson(recipe.Ingrédients);
-                                } else {
-                                    throw new Error("Not a known object format, treating as a list.");
-                                }
-                            }
-
+                            let ingredients = JSON.parse(recipe.Ingrédients);
                             if (Array.isArray(ingredients)) {
                                 ingredients.forEach(ing => {
                                     if (ing.nom) addIngredient(ing);
                                 });
                             }
                         } catch (e) {
-                            // Fallback for simple newline-separated strings or other formats
                             String(recipe.Ingrédients).split('\n').map(i => i.trim()).filter(Boolean).forEach(i => addTextIngredient(i));
                         }
                     }
@@ -874,20 +885,16 @@ async function initApp() {
             }
         }
 
-        // 2. Add recurring items
         RECURRING_ITEMS.forEach(item => addTextIngredient(item));
 
-        // 3. Format the aggregated list for display and sort alphabetically
         const finalList = Array.from(ingredientMap.values()).map(item => {
             if (item.total > 0) {
-                // Round fractions to 2 decimal places for readability
                 const displayQty = Math.round(item.total * 100) / 100;
                 return [displayQty, item.unit, item.originalName].filter(Boolean).join(' ');
             }
             return item.originalName;
         }).sort((a, b) => a.localeCompare(b));
 
-        // 4. Update Firestore
         const batch = db.batch();
         const existingGroceries = await refs.groceries.get();
         existingGroceries.forEach(doc => batch.delete(doc.ref));
@@ -901,9 +908,7 @@ async function initApp() {
         alert("Liste d'épicerie générée avec succès !");
     }
 
-    // --- LIVRE DE RECETTES ---
     function renderRecipeBook() {
-        // Initial sort before rendering
         const sortedRecipes = [...allRecipes].sort((a, b) => (a.Semaine - b.Semaine) || ((DAY_ORDER[a.Jour] || 99) - (DAY_ORDER[b.Jour] || 99)));
         renderRecipeTable(sortedRecipes);
 
@@ -941,7 +946,7 @@ async function initApp() {
             const sortKey = header.dataset.sort;
             const currentDirection = sortState[sortKey] || 'asc';
             const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-            sortState = { [sortKey]: newDirection }; // Reset sort state to the current column
+            sortState = { [sortKey]: newDirection };
 
             const sorted = [...recipes].sort((a, b) => {
                 const valA = a[sortKey], valB = b[sortKey];
@@ -961,17 +966,16 @@ async function initApp() {
         });
     }
 
-    // --- GESTION DES RECETTES (MODALE) ---
-    function showEditRecipeModal(recipeId = null) {
+    function showEditRecipeModal(recipeId = null, onSaveCallback = null) {
         const modal = $('#edit-recipe-modal');
         const form = $('#edit-recipe-form');
         const title = $('#edit-recipe-title');
-        form.innerHTML = ''; // Clear previous form
+        form.innerHTML = '';
 
         const recipe = recipeId ? allRecipes.find(r => r.id === recipeId) : {};
         title.textContent = recipeId ? 'Modifier la recette' : 'Ajouter une nouvelle recette';
 
-        const fields = ['Plat', 'Repas', 'Jour', 'Semaine', 'Ingrédients', 'Recette'];
+        const fields = ['Plat', 'Repas', 'Jour', 'Semaine', 'Ingrédients', 'Recette', 'Image', 'Lien'];
         fields.forEach(field => {
             const value = recipe[field] || '';
             const isTextarea = ['Ingrédients', 'Recette'].includes(field);
@@ -988,8 +992,6 @@ async function initApp() {
         }
         form.innerHTML += `<div class="form-actions">${formActionsHTML}</div>`;
 
-        // --- Form Submission (Save) ---
-
         form.onsubmit = async (e) => {
             e.preventDefault();
             const formData = new FormData(form);
@@ -998,15 +1000,18 @@ async function initApp() {
             const docRef = recipeId ? refs.recipes.doc(recipeId) : refs.recipes.doc();
             await docRef.set(newRecipeData, { merge: true });
 
-            // Refresh local data and view
             const recipesSnap = await refs.recipes.get();
             allRecipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderMainContent();
 
             closeModal('edit-recipe-modal');
+
+            if (onSaveCallback) {
+                onSaveCallback();
+            } else {
+                renderMainContent();
+            }
         };
 
-        // --- Delete Button Handler ---
         if (recipeId) {
             const deleteBtn = form.querySelector('#delete-recipe-btn');
             deleteBtn.onclick = async () => {
@@ -1022,6 +1027,34 @@ async function initApp() {
         openModal('edit-recipe-modal');
     }
 
-    // Initialisation
+    function renderSettings() {
+        const userList = $('#user-list');
+        if (!userList) return;
+
+        userList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-user-btn')) {
+                const userId = e.target.dataset.id;
+                if (confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) {
+                    refs.users.doc(userId).delete();
+                }
+            }
+        });
+
+        refs.users.onSnapshot(snap => {
+            userList.innerHTML = '';
+            snap.forEach(doc => {
+                const user = { id: doc.id, ...doc.data() };
+                const item = document.createElement('div');
+                item.className = 'user-item';
+                item.innerHTML = `
+                    <span class="user-color-swatch" style="background-color: ${user.color};"></span>
+                    <span>${user.name}</span>
+                    <button class="delete-user-btn" data-id="${user.id}">&times;</button>
+                `;
+                userList.appendChild(item);
+            });
+        });
+    }
+
     renderMainContent();
 }

@@ -36,10 +36,12 @@
                 <a href="#" class="nav-item" data-view="tasks">Tâches</a>
                 <a href="#" class="nav-item" data-view="groceries">Épicerie</a>
                 <a href="#" class="nav-item" data-view="recipes">Livre de recettes</a>
+                <a href="#" class="nav-item" data-view="settings">Paramètres</a>
             </nav>
             <div class="sidebar-footer">
                 <button id="import-csv-btn" class="btn-secondary btn-full-width">Importer un menu (CSV)</button>
                 <input type="file" id="csv-file-input" style="display:none;" accept=".csv">
+                <div id="app-version"></div>
             </div>
         </aside>
 
@@ -88,9 +90,12 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <!-- Firebase SDK -->
+    <script src="/__/firebase/8.10.0/firebase-app.js"></script>
+    <script src="/__/firebase/8.10.0/firebase-auth.js"></script>
+    <script src="/__/firebase/8.10.0/firebase-firestore.js"></script>
+    <script src="/__/firebase/init.js"></script>
+
     <script src="script.js"></script>
 </body>
 </html>
